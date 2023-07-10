@@ -7,6 +7,7 @@ except ImportError as exc:
     except ImportError:
         raise exc
 
+from ._constants import Constants
 from .schemes import *
 
 

@@ -6,6 +6,7 @@ import scipy.sparse
 
 import esmf_regrid
 from . import esmpy
+from . import Constants
 from ._esmf_sdo import GridInfo, RefinedGridInfo
 
 __all__ = [
@@ -57,7 +58,7 @@ def _weights_dict_to_sparse_array(weights, shape, index_offsets):
 class Regridder:
     """Regridder for directly interfacing with :mod:`esmpy`."""
 
-    def __init__(self, src, tgt, method="conservative", precomputed_weights=None):
+    def __init__(self, src, tgt, method=Constants.Method.CONSERVATIVE, precomputed_weights=None):
         """
         Create a regridder from descriptions of horizontal grids/meshes.
 
@@ -76,11 +77,8 @@ class Regridder:
             Describes the target mesh/grid.
             Data output by this regridder will be a :class:`numpy.ndarray` whose
             shape is compatible with ``tgt``.
-        method : str
-            Either "conservative", "bilinear" or "nearest". Corresponds to the :mod:`esmpy` methods
-            :attr:`~esmpy.api.constants.RegridMethod.CONSERVE`,
-            :attr:`~esmpy.api.constants.RegridMethod.BILINEAR` or
-            :attr:`~esmpy.api.constants.RegridMethod.NEAREST_STOD` used to calculate weights.
+        method : :class:`Constants.Method`
+            The method to be used to calculate weights.
         precomputed_weights : :class:`scipy.sparse.spmatrix`, optional
             If ``None``, :mod:`esmpy` will be used to
             calculate regridding weights. Otherwise, :mod:`esmpy` will be bypassed
@@ -89,11 +87,11 @@ class Regridder:
         self.src = src
         self.tgt = tgt
 
-        if method == "conservative":
+        if method == Constants.Method.CONSERVATIVE:
             esmf_regrid_method = esmpy.RegridMethod.CONSERVE
-        elif method == "bilinear":
+        elif method == Constants.Method.CONSERVATIVE:
             esmf_regrid_method = esmpy.RegridMethod.BILINEAR
-        elif method == "nearest":
+        elif method == Constants.Method.CONSERVATIVE:
             esmf_regrid_method = esmpy.RegridMethod.NEAREST_STOD
         else:
             raise ValueError(
@@ -144,7 +142,7 @@ class Regridder:
             self.esmf_version = None
             self.weight_matrix = precomputed_weights
 
-    def regrid(self, src_array, norm_type="fracarea", mdtol=1):
+    def regrid(self, src_array, norm_type=Constants.NormType.FRACAREA, mdtol=1):
         """
         Perform regridding on an array of data.
 
@@ -152,11 +150,8 @@ class Regridder:
         ----------
         src_array : :obj:`~numpy.typing.ArrayLike`
             Array whose shape is compatible with ``self.src``
-        norm_type : str
-            Either ``fracarea`` or ``dstarea``, defaults to ``fracarea``. Determines the
-            type of normalisation applied to the weights. Normalisations correspond
-            to :mod:`esmpy` constants :attr:`~esmpy.api.constants.NormType.FRACAREA` and
-            :attr:`~esmpy.api.constants.NormType.DSTAREA`.
+        norm_type : Constants.NormType
+            Determines the type of normalisation applied to the weights.
         mdtol : float, default=1
             A number between 0 and 1 describing the missing data tolerance.
             Depending on the value of ``mdtol``, if a cell in the target grid is not
@@ -190,9 +185,9 @@ class Regridder:
         tgt_mask = weight_sums > 1 - mdtol
         masked_weight_sums = weight_sums * tgt_mask
         normalisations = np.ones([self.tgt.size, extra_size])
-        if norm_type == "fracarea":
+        if norm_type == Constants.NormType.FRACAREA:
             normalisations[tgt_mask] /= masked_weight_sums[tgt_mask]
-        elif norm_type == "dstarea":
+        elif norm_type == Constants.NormType.DSTAREA:
             pass
         else:
             raise ValueError(f'Normalisation type "{norm_type}" is not supported')
